@@ -11,11 +11,11 @@ class EvokerGame {
             println("Enter Command: ")
 
             readLine()?.let { userInput ->
-                val userCommand = UserCommand(userInput, activeScene.targetContext())
+                val userCommand = UserCommand(userInput, activeScene.actors)
                 println(">>>\t" + userCommand.printed())
                 if (userCommand.command == "exit") exitProcess(0)
 
-                activeScene.handleInput(userCommand) // <-- not implemented yet
+                activeScene.handleInput(userCommand)
 
                 val deadActors = activeScene.bringOutYerDead()
             }

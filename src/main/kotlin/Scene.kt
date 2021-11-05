@@ -2,25 +2,19 @@ sealed class Scene(player: Actor.Player) {
     var actors = mutableListOf<Actor>(player)
 
     fun describeScene() {
-        // TODO: More complex descriptions.
         actors
             .asSequence()
             .filter { !it.isPlayer }
-            .map { it.description() }
+            .map { it.description(brief = true) }
             .forEach { println(it) }
     }
 
     fun handleInput(userCommand: UserCommand) {
-        // TODO: Create system of interaction which applies to not just the player, but all actors with AI Behavior,
-        //  eventually.
-    }
-
-    fun targetContext(): List<String> {
-        return actors
-            .asSequence()
-            .filter { !it.isPlayer && !it.hidden }
-            .map { it.name }
-            .toList()
+        action(userCommand)?.eventTrigger?.invoke(
+            this,
+            getPlayer(),
+            userCommand.target
+        )
     }
 
     fun getPlayer(): Actor {

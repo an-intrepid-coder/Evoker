@@ -1,8 +1,9 @@
 val validCommands = listOf(
     "move",
     "strike",
-    "grab",
-    "open",
+    "examine",
+    "handle",
+    "loot",
     "exit"
 )
 
@@ -13,23 +14,34 @@ val validCommands = listOf(
  */
 class UserCommand(
     val raw: String,
-    val targetEnvironment: List<String>,
+    val targetEnvironment: List<Actor>,
 ) {
     var command: String? = null
     val potentialModifiers = mutableListOf<String>()
-    var target: String? = null
+    var target: Actor? = null
 
     init {
-        val words = raw.split(" ")
+        val targets = targetEnvironment.zip(
+            targetEnvironment.map { actor ->
+                if (actor.isPlayer)
+                    "self"
+                else
+                    actor.name.lowercase()
+            }
+        )
+
+        val words = raw
+            .lowercase()
+            .split(" ")
         command = words.firstOrNull { validCommands.contains(it) }
-        target = words.firstOrNull { targetEnvironment.contains(it) }
-        words.forEach {
-            if (it !in validCommands && it !in targetEnvironment)
-                potentialModifiers.add(it)
+        target = targets.firstOrNull { words.contains(it.second) }?.first
+        words.forEach { word ->
+            if (word !in validCommands && word !in targets.map { it.second })
+                potentialModifiers.add(word)
         }
     }
 
     fun printed(): String {
-        return "($command -> $target; $potentialModifiers)"
+        return "($command -> ${target?.name}; $potentialModifiers)"
     }
 }

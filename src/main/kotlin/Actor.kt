@@ -6,9 +6,13 @@ sealed class Actor(
     val name: String,
     var maxHealth: Int = 10,
     val isPlayer: Boolean = false,
-    val hidden: Boolean = false,
+    var hidden: Boolean = false,
+    var locked: Boolean = false,
+    var animate: Boolean = false,
+    var interactive: Boolean = false,
+    val areaTransition: Boolean = false,
     var inventory: MutableList<Actor>? = null,
-    val eventTrigger: ((Scene, Actor, Actor) -> Unit)? = null
+    val eventTrigger: ((Scene, Actor, Actor?) -> Unit)? = null
     // more params to come
 ) {
     var health = maxHealth
@@ -17,7 +21,9 @@ sealed class Actor(
         return health > 0
     }
 
-    fun description(): String {
+    fun description(brief: Boolean = false): String {
+        if (brief)
+            return "You see a $name."
         val descriptionLines = listOf(
             "You see a $name.",
             "\n\tIt has $health/$maxHealth health.",
@@ -61,19 +67,30 @@ sealed class Actor(
         return deadInventory
     }
 
+    fun transferInventory(other: Actor) {
+        inventory?.forEach { item ->
+            other.addToInventory(item)
+            if (other.isPlayer)
+                println("You looted a ${item.name}!")
+        }
+        inventory = mutableListOf()
+    }
+
     class Player : Actor(
         name = "Player",
         isPlayer = true,
+        animate = true,
         inventory = mutableListOf()
     )
 
     class HealingPotion : Actor(
         name = "Healing Potion",
         maxHealth = 1,
+        interactive = true,
         eventTrigger = { _, self, triggerer ->
             // Heals the user and then self-destructs.
             val healAmountRange = 5..10
-            triggerer.changeHealth(healAmountRange.random())
+            triggerer?.changeHealth(healAmountRange.random())
             self.changeHealth(-1)
         }
     )
@@ -82,13 +99,6 @@ sealed class Actor(
         name = "Chest",
         maxHealth = 5,
         inventory = mutableListOf(randomPotion()), // for now
-        eventTrigger = { _, self, triggerer ->
-            // Transfers its contents to the triggerer, if it contains any.
-            self.inventory?.forEach { item ->
-                triggerer.inventory?.add(item)
-            }
-            self.inventory = mutableListOf()
-        }
     )
 }
 
