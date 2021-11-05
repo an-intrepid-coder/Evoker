@@ -4,12 +4,14 @@ class SceneMap {
     var activeScene: Scene? = null
 
     init { // TODO: Tie the whole map together and determine procedural order of operations:
-        addScene(Scene.Opening(Actor.Player(), this))
-        activeScene = scenes[0]
+        addScene(Scene.Opening(this)).let {
+            activeScene = scenes[it]
+        }
     }
 
-    fun addScene(scene: Scene) {
-        scenes[numScenes++] = scene
+    fun addScene(scene: Scene): Int {
+        scenes[scene.id] = scene
+        return scene.id
     }
 
     /**

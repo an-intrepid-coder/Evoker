@@ -28,6 +28,8 @@ sealed class Actor(
             return interactiveEffect!!
                 .invoke(null, null, null)
                 .joinToString(" ")
+        else if (areaTransitionId != null)
+            return "This leads somewhere..."
         val descriptionLines = listOf(
             "You see a $name.",
             "\n\tIt has $health/$maxHealth health.",
@@ -90,13 +92,13 @@ sealed class Actor(
         inventory = mutableListOf()
     )
 
-    class Door(sceneId: Int) : Actor(
-        name = "Door",
-        areaTransitionId = sceneId,
+    class DoorTo(scene: Scene) : Actor(
+        name = "Door${scene.id}",
+        areaTransitionId = scene.id,
         interactiveEffect = { sceneMap, _, _ ->
             val messages = mutableListOf<String>()
-            sceneMap?.changeScene(sceneId).let { id ->
-                if (id == null) error("Invalid sceneId: $sceneId.")
+            sceneMap?.changeScene(scene.id).let { id ->
+                if (id == null) error("Invalid sceneId: ${scene.id}.")
                 messages.add("You walk through the door towards " + sceneMap!!.activeScene!!.name + ".")
             }
             messages

@@ -1,8 +1,7 @@
 val validCommands = listOf(
-    "move",
     "strike",
     "examine",
-    "handle",
+    "use",
     "loot",
     "help",
     "exit"

@@ -1,11 +1,20 @@
 import kotlin.system.exitProcess
 
+val hallwayNames = listOf(
+    "A Winding Hallway",
+    "A Long, Straight Hallway",
+    "A Dark Hallway",
+    "A Dirty Hallway",
+    "An Uneven, Damaged Hallway",
+    // more to come
+)
+
 sealed class Scene(
-    player: Actor.Player,
     val name: String,
     val parentSceneMap: SceneMap,
 ) {
-    var actors = mutableListOf<Actor>(player)
+    val id = parentSceneMap.numScenes++
+    var actors = mutableListOf<Actor>()
 
     fun describeScene(): List<String> {
         return actors
@@ -28,8 +37,8 @@ sealed class Scene(
         )
     }
 
-    fun getPlayer(): Actor {
-        return actors.first { it.isPlayer }
+    fun getPlayer(): Actor? {
+        return actors.firstOrNull { it.isPlayer }
     }
 
     fun refreshActors(): List<Actor> {
@@ -44,10 +53,8 @@ sealed class Scene(
     }
 
     class Opening(
-        player: Actor.Player,
         parentSceneMap: SceneMap,
     ) : Scene(
-        player,
         "Your Filthy Cell",
         parentSceneMap
     ) {
@@ -68,6 +75,23 @@ sealed class Scene(
                         "\nFor some reason your cell door is wide open." +
                         "\nThere is nothing stopping you from walking out..."
             ))
+            Hallway(parentSceneMap, this).let { hallway ->
+                actors.add(Actor.DoorTo(hallway))
+                parentSceneMap.addScene(hallway)
+            }
+        }
+    }
+
+    class Hallway(
+        parentSceneMap: SceneMap,
+        cameFrom: Scene,
+    ) : Scene(
+        hallwayNames.random(),
+        parentSceneMap
+    ) {
+        init {
+            actors.add(Actor.DoorTo(cameFrom))
+            // TODO: More doors and some other features of a hallway
         }
     }
 }
