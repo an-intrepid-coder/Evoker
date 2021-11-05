@@ -1,25 +1,29 @@
-import kotlin.system.exitProcess
-
 class EvokerGame {
     var gameOver = false
-    val scenes = mutableListOf(Scene.Opening(Actor.Player()))
-    var activeScene = scenes.first()
+    var turn: Int = 0
+    val sceneMap = SceneMap()
+    val messageLog = MessageLog()
 
     fun play() {
         while (!gameOver) {
-            activeScene.describeScene()
-            println("Enter Command: ")
+            sceneMap.activeScene?.let { activeScene ->
+                activeScene.describeScene().forEach { msg ->
+                    messageLog.messageIn(msg)
+                }
+                messageLog.outputAll().forEach { println(it) }
+                turn++
+                println("(turn $turn) Enter Command: ")
 
-            readLine()?.let { userInput ->
-                val userCommand = UserCommand(userInput, activeScene.actors)
-                println(">>>\t" + userCommand.printed())
-                if (userCommand.command == "exit") exitProcess(0)
+                readLine()?.let { userInput ->
+                    val userCommand = UserCommand(userInput, activeScene.actors)
+                    println(">>>\t" + userCommand.printed())
+                    activeScene.handleInput(userCommand)?.forEach { msg ->
+                        messageLog.messageIn(msg)
+                    }
 
-                activeScene.handleInput(userCommand)
-
-                val deadActors = activeScene.bringOutYerDead()
+                    val deadActors = activeScene.refreshActors()
+                }
             }
         }
     }
-
 }

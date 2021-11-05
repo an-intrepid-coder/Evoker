@@ -5,14 +5,14 @@
 sealed class Actor(
     val name: String,
     var maxHealth: Int = 10,
+    val isFlavor: Boolean = false,
     val isPlayer: Boolean = false,
     var hidden: Boolean = false,
     var locked: Boolean = false,
     var animate: Boolean = false,
-    var interactive: Boolean = false,
-    val areaTransition: Boolean = false,
+    val areaTransitionId: Int? = null,
     var inventory: MutableList<Actor>? = null,
-    val eventTrigger: ((Scene, Actor, Actor?) -> Unit)? = null
+    val interactiveEffect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null
     // more params to come
 ) {
     var health = maxHealth
@@ -24,6 +24,10 @@ sealed class Actor(
     fun description(brief: Boolean = false): String {
         if (brief)
             return "You see a $name."
+        if (isFlavor)
+            return interactiveEffect!!
+                .invoke(null, null, null)
+                .joinToString(" ")
         val descriptionLines = listOf(
             "You see a $name.",
             "\n\tIt has $health/$maxHealth health.",
@@ -42,13 +46,16 @@ sealed class Actor(
     }
 
     /**
-     * Returns true or false if the actor lives or dies from the change.
+     * Returns the new health after the change.
      */
-    fun changeHealth(amount: Int): Boolean {
+    fun changeHealth(amount: Int): Int {
         health += amount
-        if (health < 0) return false
-        else if (health > maxHealth) health = maxHealth
-        return true
+        if (health > maxHealth) health = maxHealth
+        return health
+    }
+
+    fun kill() {
+        health = 0
     }
 
     fun addToInventory(actor: Actor) {
@@ -83,15 +90,47 @@ sealed class Actor(
         inventory = mutableListOf()
     )
 
+    class Door(sceneId: Int) : Actor(
+        name = "Door",
+        areaTransitionId = sceneId,
+        interactiveEffect = { sceneMap, _, _ ->
+            val messages = mutableListOf<String>()
+            sceneMap?.changeScene(sceneId).let { id ->
+                if (id == null) error("Invalid sceneId: $sceneId.")
+                messages.add("You walk through the door towards " + sceneMap!!.activeScene!!.name + ".")
+            }
+            messages
+        }
+    )
+
+    class Flavor(
+        name: String,
+        flavorText: String,
+    ) : Actor(
+        name = name,
+        isFlavor = true,
+        interactiveEffect = { _, _, _ ->
+            listOf(flavorText + "\n")
+        }
+    )
+
     class HealingPotion : Actor(
         name = "Healing Potion",
         maxHealth = 1,
-        interactive = true,
-        eventTrigger = { _, self, triggerer ->
+        interactiveEffect = { _, self, triggerer ->
             // Heals the user and then self-destructs.
+            val messages = mutableListOf<String>()
+            self?.isPlayer?.let {
+                messages.add("You used a Healing Potion!")
+            }
             val healAmountRange = 5..10
-            triggerer?.changeHealth(healAmountRange.random())
-            self.changeHealth(-1)
+            triggerer?.changeHealth(healAmountRange.random())?.let { newHealth ->
+                self?.isPlayer?.let {
+                    messages.add("\tNew health is $newHealth")
+                }
+            }
+            self?.kill()
+            messages
         }
     )
 

@@ -7,6 +7,7 @@ fun action(userCommand: UserCommand): Action? {
             "examine" -> Action.Examine(userCommand)
             "handle" -> Action.Handle(userCommand)
             "loot" -> Action.Loot(userCommand)
+            // More action types to come
             else -> error("Invalid command.")
         }
     }
@@ -14,38 +15,42 @@ fun action(userCommand: UserCommand): Action? {
 
 sealed class Action(
     val userCommand: UserCommand,
-    val eventTrigger: ((Scene, Actor, Actor?) -> Unit)? = null
+    val effect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null
 ) {
-    class Move(userCommand: UserCommand) : Action(userCommand)
+    class Move(userCommand: UserCommand) : Action(userCommand) // TODO
 
-    class Strike(userCommand: UserCommand) : Action(userCommand)
+    class Strike(userCommand: UserCommand) : Action(userCommand) // TODO
 
     class Examine(userCommand: UserCommand) : Action(
         userCommand = userCommand,
-        eventTrigger = { _, _, target ->
+        effect = { _, _, target ->
+            val messages = mutableListOf<String>()
             val description = target?.description()
             if (description != null)
-                println(description)
+                messages.add(description)
             else
-                println("You look around but don't find what you're looking for.")
+                messages.add("You look around but don't find what you're looking for.")
+            messages
         }
     )
 
-    class Handle(userCommand: UserCommand) : Action(userCommand)
+    class Handle(userCommand: UserCommand) : Action(userCommand) // TODO
 
     class Loot(userCommand: UserCommand) : Action(
         userCommand = userCommand,
-        eventTrigger = { _, self, target ->
+        effect = { _, self, target ->
+            val messages = mutableListOf<String>()
             if (target == null)
-                println("What are you trying to open?")
+                messages.add("What are you trying to loot?")
             else if (target.inventory == null)
-                println("The target has no inventory.")
+                messages.add("The target has no inventory.")
             else if (target.animate)
-                println("You can only open inanimate objects.")
+                messages.add("You can only loot inanimate objects.")
             else if (target.inventory!!.isEmpty())
-                println("The target is empty.")
+                messages.add("The target is empty.")
             else if (target.inventory != null && !target.animate)
-                target.transferInventory(self)
+                target.transferInventory(self!!)
+            messages
         }
     )
 }

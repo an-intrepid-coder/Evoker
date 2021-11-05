@@ -4,6 +4,7 @@ val validCommands = listOf(
     "examine",
     "handle",
     "loot",
+    "help",
     "exit"
 )
 
