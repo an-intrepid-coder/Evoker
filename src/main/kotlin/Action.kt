@@ -16,7 +16,19 @@ sealed class Action(
     val userCommand: UserCommand,
     val effect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null
 ) {
-    class Strike(userCommand: UserCommand) : Action(userCommand) // TODO
+    class Strike(userCommand: UserCommand) : Action(
+        userCommand = userCommand,
+        effect = { sceneMap, self, target ->
+            // For now, striking will always do one damage. For now.
+            val messages = mutableListOf<String>()
+            when (target?.changeHealth(-1)) {
+                null -> messages.add("What are you trying to accomplish?")
+                0 -> messages.add("You destroyed a ${target.name}")
+                else -> messages.add("You damaged a ${target.name}")
+            }
+            messages
+        }
+    )
 
     class Examine(userCommand: UserCommand) : Action(
         userCommand = userCommand,
@@ -41,7 +53,7 @@ sealed class Action(
             if (effect == null)
                 messages.add("You can't use that.")
             else
-                effect.invoke(sceneMap, self, target).forEach { messages.add(it) }
+                effect.invoke(sceneMap, target, self).forEach { messages.add(it) }
             messages
         }
     )
@@ -54,12 +66,12 @@ sealed class Action(
                 messages.add("What are you trying to loot?")
             else if (target.inventory == null)
                 messages.add("The target has no inventory.")
-            else if (target.animate)
-                messages.add("You can only loot inanimate objects.")
             else if (target.inventory!!.isEmpty())
                 messages.add("The target is empty.")
-            else if (target.inventory != null && !target.animate)
+            else if (target.inventory != null && target.lootable)
                 target.transferInventory(self!!)
+            else if (target.inventory != null && !target.lootable)
+                messages.add("That is not lootable at the moment.")
             messages
         }
     )

@@ -13,8 +13,8 @@ val validCommands = listOf(
  * depends on given context environment.
  */
 class UserCommand(
-    val raw: String,
-    val targetEnvironment: List<Actor>,
+    private val raw: String,
+    private val targetEnvironment: List<Actor>,
 ) {
     var command: String? = null
     val potentialModifiers = mutableListOf<String>()
@@ -33,6 +33,7 @@ class UserCommand(
         val words = raw
             .lowercase()
             .split(" ")
+
         command = words.firstOrNull { validCommands.contains(it) }
         target = targets.firstOrNull { words.contains(it.second) }?.first
         words.forEach { word ->
@@ -42,6 +43,6 @@ class UserCommand(
     }
 
     fun printed(): String {
-        return "($command -> ${target?.name}; $potentialModifiers)"
+        return "($command -> ${target?.name ?: "No Target"}; $potentialModifiers)"
     }
 }

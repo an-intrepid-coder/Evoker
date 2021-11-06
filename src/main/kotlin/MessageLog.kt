@@ -6,7 +6,7 @@ class MessageLog {
         unreadMessages.add(msg)
     }
 
-    fun messageOut(): String? {
+    private fun messageOut(): String? {
         return unreadMessages.removeFirstOrNull()?.let { msg ->
             readMessages.add(msg)
             msg

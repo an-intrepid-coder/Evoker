@@ -1,17 +1,15 @@
-/*
-    TODO: Long-Term Features:
-        - A complex time system.
-        - A complex combat system.
- */
-
 class EvokerGame {
-    var gameOver = false
     var turn: Int = 0
     val sceneMap = SceneMap()
     val messageLog = MessageLog()
 
+    private fun gameOver(): Boolean {
+        val player = sceneMap.activeScene?.getPlayer() ?: error("Player not found!")
+        return player.isAlive() == false
+    }
+
     fun play() {
-        while (!gameOver) {
+        while (!gameOver()) {
             sceneMap.activeScene?.let { activeScene ->
                 activeScene.describeScene().forEach { msg ->
                     messageLog.messageIn(msg)

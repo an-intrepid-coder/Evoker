@@ -9,7 +9,7 @@ val hallwayNames = listOf(
     // more to come
 )
 
-val cellnames = listOf(
+val cellNames = listOf(
     "A Filthy Cell",
     "A Gory Cell",
     "Another Cell",
@@ -49,10 +49,30 @@ val cellFlavors = listOf(
 
 sealed class Scene(
     val name: String,
-    val parentSceneMap: SceneMap,
+    private val parentSceneMap: SceneMap,
 ) {
     val id = parentSceneMap.numScenes++
     var actors = mutableListOf<Actor>()
+
+    fun markCameFrom(previousSceneIndex: Int) {
+        actors.asSequence()
+            .filter { it.areaTransitionId == previousSceneIndex }
+            .forEach { it.cameFrom = true }
+    }
+
+    fun clearCameFrom() {
+        actors.asSequence()
+            .filter { it.cameFrom }
+            .forEach { it.cameFrom = false }
+    }
+
+    fun addActor(actor: Actor) {
+        actors.add(actor)
+    }
+
+    fun removeActor(actor: Actor): Boolean {
+        return actors.remove(actor)
+    }
 
     fun describeScene(): List<String> {
         return actors
@@ -83,7 +103,7 @@ sealed class Scene(
         var deadActors = listOf<Actor>()
         actors.forEach { actor ->
             actor.refreshInventory()?.let { deadActors = deadActors.plus(it) }
-            if (!actor.isAlive())
+            if (actor.isAlive() == false)
                 deadActors = deadActors.plus(actor)
         }
         actors = actors.filter { it !in deadActors }.toMutableList()
@@ -101,14 +121,14 @@ sealed class Scene(
         parentSceneMap
     ) {
         init {
-            actors.add(Actor.Flavor(
+            addActor(Actor.Flavor(
                 name = "note",
                 flavorText = "Pinned to the wall is a dirty note. It says:" +
                         "\n'This is a test. Make it out of here and survive, or die in the attempt." +
                         "\nI have prepared the way with both obstacles and boons." +
                         "\nGood luck.'"
             ))
-            actors.add(Actor.Flavor(
+            addActor(Actor.Flavor(
                 name = "cell",
                 flavorText = "You don't remember how long you've been here." +
                         "\nIn fact, you don't remember anything prior to this filthy cell." +
@@ -117,7 +137,7 @@ sealed class Scene(
                         "\nThere is nothing stopping you from walking out..."
             ))
             Hallway(parentSceneMap, this).let { hallway ->
-                actors.add(Actor.DoorTo(hallway))
+                addActor(Actor.DoorTo(hallway))
                 parentSceneMap.numHallways++
                 parentSceneMap.addScene(hallway)
             }
@@ -132,14 +152,14 @@ sealed class Scene(
         parentSceneMap
     ) {
         init {
-            val additionalConnections = (1..3).random() // for now
+            val additionalConnections = (1..3).random() // for now; may adjust this
             var addedHallway = false
-            actors.add(Actor.DoorTo(cameFrom))
+            addActor(Actor.DoorTo(cameFrom))
             repeat (additionalConnections) {
                 if (!addedHallway && parentSceneMap.canAddHallways()) {
                     parentSceneMap.numHallways++
                     Hallway(parentSceneMap, this).let { hallway ->
-                        actors.add(Actor.DoorTo(hallway))
+                        addActor(Actor.DoorTo(hallway))
                         parentSceneMap.addScene(hallway)
                     }
                     addedHallway = true
@@ -147,7 +167,7 @@ sealed class Scene(
                 else
                     // Tentative: TODO: More types of rooms and a factory function.
                     Cell(parentSceneMap, this).let { cell ->
-                        actors.add(Actor.DoorTo(cell))
+                        addActor(Actor.DoorTo(cell))
                         parentSceneMap.addScene(cell)
                     }
             }
@@ -159,12 +179,12 @@ sealed class Scene(
         parentSceneMap: SceneMap,
         cameFrom: Scene
     ) : Scene(
-        cellnames.random(),
+        cellNames.random(),
         parentSceneMap
     ) {
         init {
-            actors.add(Actor.DoorTo(cameFrom))
-            actors.add(cellFlavors.random())
+            addActor(Actor.DoorTo(cameFrom))
+            addActor(cellFlavors.random())
             // TODO: Perhaps potential enemies and loot?
         }
     }

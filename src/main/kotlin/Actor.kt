@@ -4,35 +4,46 @@
  */
 sealed class Actor(
     val name: String,
-    var maxHealth: Int = 10,
+    var maxHealth: Int? = null,
     val isFlavor: Boolean = false,
     val isPlayer: Boolean = false,
     var hidden: Boolean = false,
     var locked: Boolean = false,
-    var animate: Boolean = false,
     val areaTransitionId: Int? = null,
+    var cameFrom: Boolean = false,
     var inventory: MutableList<Actor>? = null,
-    val interactiveEffect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null
+    var lootable: Boolean = false,
+    val interactiveEffect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null,
+    val behavior: ((SceneMap, Actor) -> List<String>)? = null
     // more params to come
 ) {
     var health = maxHealth
 
-    fun isAlive(): Boolean {
-        return health > 0
+    fun isAlive(): Boolean? {
+        return health?.let { health!! > 0 }
     }
 
     fun description(brief: Boolean = false): String {
         if (brief)
-            return "You see a $name."
+            return "You see a $name." + when (cameFrom) {
+                true -> " <"
+                else -> ""
+            }
         if (isFlavor)
             return interactiveEffect!!
                 .invoke(null, null, null)
                 .joinToString(" ")
         else if (areaTransitionId != null)
-            return "This leads somewhere..."
+            return when (cameFrom) {
+                true -> "You just came from this direction."
+                else -> "This leads somewhere..."
+            }
         val descriptionLines = listOf(
             "You see a $name.",
-            "\n\tIt has $health/$maxHealth health.",
+            when (health) {
+                null -> "\n\tIt is indestructible."
+                else -> "\n\tIt has $health/$maxHealth health."
+            },
             when (hidden) {
                 true -> "\n\tIt is hidden."
                 else -> null
@@ -41,6 +52,18 @@ sealed class Actor(
                 true -> "\n\tIt has an inventory."
                 else -> null
             },
+            when (lootable) {
+                true -> "\n\tIt is lootable."
+                else -> null
+            },
+            when (locked && lootable) {
+                true -> "\n\tIt is locked."
+                else -> null
+            },
+            when(behavior) {
+                null -> null
+                else -> "\n\tIt seems capable of action."
+            }
         )
         return descriptionLines
             .filterNotNull()
@@ -50,10 +73,13 @@ sealed class Actor(
     /**
      * Returns the new health after the change.
      */
-    fun changeHealth(amount: Int): Int {
-        health += amount
-        if (health > maxHealth) health = maxHealth
-        return health
+    fun changeHealth(amount: Int): Int? {
+        return health?.let {
+            health = health!! + amount
+            if (health!! > maxHealth!!) health = maxHealth
+            else if (health!! < 0) health = 0
+            health
+        }
     }
 
     fun kill() {
@@ -69,7 +95,7 @@ sealed class Actor(
     }
 
     fun refreshInventory(): List<Actor>? {
-        val deadInventory = inventory?.filter { !it.isAlive() }
+        val deadInventory = inventory?.filter { it.isAlive() == false }
         if (deadInventory != null) {
             inventory = inventory!!.filter { it !in deadInventory }.toMutableList()
         }
@@ -88,18 +114,28 @@ sealed class Actor(
     class Player : Actor(
         name = "Player",
         isPlayer = true,
-        animate = true,
+        maxHealth = 10,
         inventory = mutableListOf()
     )
+
+    //class WanderingGolem TODO
 
     class DoorTo(scene: Scene) : Actor(
         name = "Door${scene.id}",
         areaTransitionId = scene.id,
-        interactiveEffect = { sceneMap, _, _ ->
+        interactiveEffect = { sceneMap, _, triggerer ->
             val messages = mutableListOf<String>()
-            sceneMap?.changeScene(scene.id).let { id ->
+            sceneMap ?: error("SceneMap not found.")
+            triggerer ?: error("Triggering actor not found.")
+            sceneMap.activeScene ?: error("No active scene found in SceneMap.")
+            sceneMap.activeScene!!.removeActor(triggerer)
+            sceneMap.activeScene!!.clearCameFrom()
+            val cameFromId = sceneMap.activeScene!!.id
+            sceneMap.changeScene(scene.id).let { id ->
                 if (id == null) error("Invalid sceneId: ${scene.id}.")
-                messages.add("You walk through the door towards " + sceneMap!!.activeScene!!.name + ".")
+                messages.add("You walk through the door to " + sceneMap.activeScene!!.name + ".")
+                sceneMap.activeScene!!.addActor(triggerer)
+                sceneMap.activeScene!!.markCameFrom(cameFromId)
             }
             messages
         }
