@@ -3,6 +3,15 @@ class SceneMap {
     val scenes = mutableMapOf<Int, Scene>()
     var activeScene: Scene? = null
 
+    val maxHallways = 3
+    var numHallways = 0
+
+    fun canAddHallways(): Boolean {
+        return numHallways < maxHallways
+    }
+
+    // TODO: A variety of switches and triggers to guide map generation.
+
     init { // TODO: Tie the whole map together and determine procedural order of operations:
         addScene(Scene.Opening(this)).let {
             activeScene = scenes[it]

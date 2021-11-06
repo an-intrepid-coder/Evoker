@@ -9,6 +9,44 @@ val hallwayNames = listOf(
     // more to come
 )
 
+val cellnames = listOf(
+    "A Filthy Cell",
+    "A Gory Cell",
+    "Another Cell",
+    "A Dirty Cell",
+    "An Unremarkable Cell",
+    "A Dilapidated Cell"
+    // more to come
+)
+
+val cellFlavors = listOf(
+    Actor.Flavor(
+        name = "floor",
+        flavorText = "The floor is covered in a fine layer of dust."
+    ),
+    Actor.Flavor(
+        name = "floor",
+        flavorText = "The floor is covered in bloody hand- and foot-prints."
+    ),
+    Actor.Flavor(
+        name = "walls",
+        flavorText = "The walls have bolts for restraining people with chains."
+    ),
+    Actor.Flavor(
+        name = "walls",
+        flavorText = "The walls are windowless and bleak."
+    ),
+    Actor.Flavor(
+        name = "walls",
+        flavorText = "The walls are covered in indecipherable scribblings."
+    ),
+    Actor.Flavor(
+        name = "air",
+        flavorText = "The air in this place is dank and evil."
+    ),
+    // More to come
+)
+
 sealed class Scene(
     val name: String,
     val parentSceneMap: SceneMap,
@@ -52,19 +90,22 @@ sealed class Scene(
         return deadActors
     }
 
+    /**
+     * The Opening Scene serves a "seed" from which the rest of the game grows procedurally. It will get more
+     * complex and varied as development continues. The entire scene graph unfolds from this root point.
+     */
     class Opening(
         parentSceneMap: SceneMap,
     ) : Scene(
         "Your Filthy Cell",
         parentSceneMap
     ) {
-        // Testing: This will get more complex -- TODO: A Door object leading out of the cell and to somewhere else
         init {
             actors.add(Actor.Flavor(
                 name = "note",
                 flavorText = "Pinned to the wall is a dirty note. It says:" +
                         "\n'This is a test. Make it out of here and survive, or die in the attempt." +
-                        "\nWe have prepared the way with both obstacles and boons." +
+                        "\nI have prepared the way with both obstacles and boons." +
                         "\nGood luck.'"
             ))
             actors.add(Actor.Flavor(
@@ -77,6 +118,7 @@ sealed class Scene(
             ))
             Hallway(parentSceneMap, this).let { hallway ->
                 actors.add(Actor.DoorTo(hallway))
+                parentSceneMap.numHallways++
                 parentSceneMap.addScene(hallway)
             }
         }
@@ -90,8 +132,40 @@ sealed class Scene(
         parentSceneMap
     ) {
         init {
+            val additionalConnections = (1..3).random() // for now
+            var addedHallway = false
             actors.add(Actor.DoorTo(cameFrom))
-            // TODO: More doors and some other features of a hallway
+            repeat (additionalConnections) {
+                if (!addedHallway && parentSceneMap.canAddHallways()) {
+                    parentSceneMap.numHallways++
+                    Hallway(parentSceneMap, this).let { hallway ->
+                        actors.add(Actor.DoorTo(hallway))
+                        parentSceneMap.addScene(hallway)
+                    }
+                    addedHallway = true
+                }
+                else
+                    // Tentative: TODO: More types of rooms and a factory function.
+                    Cell(parentSceneMap, this).let { cell ->
+                        actors.add(Actor.DoorTo(cell))
+                        parentSceneMap.addScene(cell)
+                    }
+            }
+            // TODO: More doors and some other features of a hallway. Perhaps enemies and loot?
+        }
+    }
+
+    class Cell(
+        parentSceneMap: SceneMap,
+        cameFrom: Scene
+    ) : Scene(
+        cellnames.random(),
+        parentSceneMap
+    ) {
+        init {
+            actors.add(Actor.DoorTo(cameFrom))
+            actors.add(cellFlavors.random())
+            // TODO: Perhaps potential enemies and loot?
         }
     }
 }

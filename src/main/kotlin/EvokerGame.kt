@@ -1,3 +1,9 @@
+/*
+    TODO: Long-Term Features:
+        - A complex time system.
+        - A complex combat system.
+ */
+
 class EvokerGame {
     var gameOver = false
     var turn: Int = 0
