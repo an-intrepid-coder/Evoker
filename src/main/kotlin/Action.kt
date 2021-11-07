@@ -1,11 +1,11 @@
-fun action(userCommand: UserCommand): Action? {
-    return userCommand.command.let { command ->
-        when (command) {
+fun action(command: Command): Action? {
+    return command.base.let { baseCommand ->
+        when (baseCommand) {
             null -> null
-            "strike" -> Action.Strike(userCommand)
-            "examine" -> Action.Examine(userCommand)
-            "use" -> Action.Use(userCommand)
-            "loot" -> Action.Loot(userCommand)
+            "strike" -> Action.Strike(command)
+            "examine" -> Action.Examine(command)
+            "use" -> Action.Use(command)
+            "loot" -> Action.Loot(command)
             // More action types to come
             else -> error("Invalid command.")
         }
@@ -13,25 +13,33 @@ fun action(userCommand: UserCommand): Action? {
 }
 
 sealed class Action(
-    val userCommand: UserCommand,
-    val effect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null
+    val command: Command,
+    val effect: ((Scene?, Actor?, Actor?) -> List<String>)? = null
 ) {
-    class Strike(userCommand: UserCommand) : Action(
-        userCommand = userCommand,
-        effect = { sceneMap, self, target ->
+    class Strike(command: Command) : Action(
+        command = command,
+        effect = { _, _, target ->
             // For now, striking will always do one damage. For now.
             val messages = mutableListOf<String>()
             when (target?.changeHealth(-1)) {
                 null -> messages.add("What are you trying to accomplish?")
-                0 -> messages.add("You destroyed a ${target.name}")
-                else -> messages.add("You damaged a ${target.name}")
+                0 -> {
+                    messages.add("You destroyed a ${target.name}")
+                    if (target.inventory != null && target.inventory!!.isNotEmpty())
+                        target.lootable = true
+                }
+                else -> {
+                    messages.add("You damaged a ${target.name}")
+                    if (target.retaliating == false)
+                        target.retaliating = true
+                }
             }
             messages
         }
     )
 
-    class Examine(userCommand: UserCommand) : Action(
-        userCommand = userCommand,
+    class Examine(command: Command) : Action(
+        command = command,
         effect = { _, _, target ->
             val messages = mutableListOf<String>()
             val description = target?.description()
@@ -43,9 +51,9 @@ sealed class Action(
         }
     )
 
-    class Use(userCommand: UserCommand) : Action(
-        userCommand = userCommand,
-        effect = { sceneMap, self, target ->
+    class Use(command: Command) : Action(
+        command = command,
+        effect = { scene, self, target ->
             val messages = mutableListOf<String>()
             if (target == null)
                 messages.add("What are you trying to use?")
@@ -53,13 +61,13 @@ sealed class Action(
             if (effect == null)
                 messages.add("You can't use that.")
             else
-                effect.invoke(sceneMap, target, self).forEach { messages.add(it) }
+                effect.invoke(scene, target, self).forEach { messages.add(it) }
             messages
         }
     )
 
-    class Loot(userCommand: UserCommand) : Action(
-        userCommand = userCommand,
+    class Loot(command: Command) : Action(
+        command = command,
         effect = { _, self, target ->
             val messages = mutableListOf<String>()
             if (target == null)

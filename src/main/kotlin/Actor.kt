@@ -1,11 +1,12 @@
 /**
  * Actors include not just creatures and the player, but any object which can be interacted
- * with or observed.
+ * with or observed. The instances of Actor each only interact with a fraction of the base class's
+ * capabilities.
  */
 sealed class Actor(
     val name: String,
     var maxHealth: Int? = null,
-    val isFlavor: Boolean = false,
+    val additionalDescriptionLines: List<String>? = null,
     val isPlayer: Boolean = false,
     var hidden: Boolean = false,
     var locked: Boolean = false,
@@ -13,8 +14,12 @@ sealed class Actor(
     var cameFrom: Boolean = false,
     var inventory: MutableList<Actor>? = null,
     var lootable: Boolean = false,
-    val interactiveEffect: ((SceneMap?, Actor?, Actor?) -> List<String>)? = null,
-    val behavior: ((SceneMap, Actor) -> List<String>)? = null
+    val interactiveEffect: ((Scene?, Actor?, Actor?) -> List<String>)? = null,
+    var timer: Int? = null,
+    val behavior: ((Scene, Actor) -> List<String>)? = null,
+    var retaliating: Boolean? = null,
+    val pathMemory: MutableList<Int>? = null,
+    val pathMemorySizeLimit: Int? = null,
     // more params to come
 ) {
     var health = maxHealth
@@ -29,10 +34,6 @@ sealed class Actor(
                 true -> " <"
                 else -> ""
             }
-        if (isFlavor)
-            return interactiveEffect!!
-                .invoke(null, null, null)
-                .joinToString(" ")
         else if (areaTransitionId != null)
             return when (cameFrom) {
                 true -> "You just came from this direction."
@@ -41,15 +42,16 @@ sealed class Actor(
         val descriptionLines = listOf(
             "You see a $name.",
             when (health) {
-                null -> "\n\tIt is indestructible."
-                else -> "\n\tIt has $health/$maxHealth health."
+                null -> "\tIt is indestructible."
+                0 -> "\tIt is dead."
+                else -> "\tIt has $health/$maxHealth health."
             },
             when (hidden) {
-                true -> "\n\tIt is hidden."
+                true -> "\tIt is hidden."
                 else -> null
             },
             when (inventory != null) {
-                true -> "\n\tIt has an inventory."
+                true -> "\tIt has an inventory."
                 else -> null
             },
             when (lootable) {
@@ -57,17 +59,21 @@ sealed class Actor(
                 else -> null
             },
             when (locked && lootable) {
-                true -> "\n\tIt is locked."
+                true -> "\tIt is locked."
                 else -> null
             },
             when(behavior) {
                 null -> null
-                else -> "\n\tIt seems capable of action."
-            }
+                else -> "\tIt seems as if it will not remain static forever."
+            },
+            when (additionalDescriptionLines) {
+                null -> null
+                else -> additionalDescriptionLines.joinToString("\n")
+            },
         )
         return descriptionLines
             .filterNotNull()
-            .joinToString(" ")
+            .joinToString("\n")
     }
 
     /**
@@ -84,6 +90,8 @@ sealed class Actor(
 
     fun kill() {
         health = 0
+        if (inventory != null && inventory!!.isNotEmpty())
+            lootable = true
     }
 
     fun addToInventory(actor: Actor) {
@@ -118,37 +126,133 @@ sealed class Actor(
         inventory = mutableListOf()
     )
 
-    //class WanderingGolem TODO
+    // TODO: More kinds of Actors with behavior functions.
 
-    class DoorTo(scene: Scene) : Actor(
-        name = "Door${scene.id}",
-        areaTransitionId = scene.id,
-        interactiveEffect = { sceneMap, _, triggerer ->
+    class WanderingGolem : Actor(
+        name = "Golem",
+        maxHealth = 200,
+        inventory = mutableListOf(),
+        retaliating = false,
+        additionalDescriptionLines = listOf(
+            "\tThis beast is a hulking monstrosity of stone and steel.",
+            "\tIt seems to be paying you no mind."
+        ),
+        pathMemory = mutableListOf(),
+        pathMemorySizeLimit = 8, // for now
+        behavior = { scene, self ->
+            /*
+                The Wandering Golem has two modes: retaliating and wandering. When retaliating it will trade blows
+                with the player for as long as the player attacks it, which is a losing proposition as this is meant
+                to be a mini-boss that is not easily bested via combat. When not retaliating it will wander randomly,
+                accruing territory in its pathMemory until it is full. Once its pathMemory is full then it will
+                stay within that territory, giving the player a chance to map out its domain.
+
+                TODO: Some sort of puzzle-oriented way of fighting the creature for the player, and a reason for
+                    doing so.
+             */
             val messages = mutableListOf<String>()
-            sceneMap ?: error("SceneMap not found.")
-            triggerer ?: error("Triggering actor not found.")
-            sceneMap.activeScene ?: error("No active scene found in SceneMap.")
-            sceneMap.activeScene!!.removeActor(triggerer)
-            sceneMap.activeScene!!.clearCameFrom()
-            val cameFromId = sceneMap.activeScene!!.id
-            sceneMap.changeScene(scene.id).let { id ->
-                if (id == null) error("Invalid sceneId: ${scene.id}.")
-                messages.add("You walk through the door to " + sceneMap.activeScene!!.name + ".")
-                sceneMap.activeScene!!.addActor(triggerer)
-                sceneMap.activeScene!!.markCameFrom(cameFromId)
+            when (self.retaliating) {
+                true -> {
+                    scene.getPlayer()?.let { player ->
+                        Action.Strike(Command(
+                            raw = "strike player",
+                            targetEnvironment = scene.actors
+                        )).effect!!.invoke(scene, self, player)
+                        messages.add("${self.name} strikes you in retaliation!")
+                        self.retaliating = false
+                    }
+                }
+                else -> {
+                    // Remove footprints
+                    scene.actors.removeAll { it.name == "Footprints" }
+
+                    // Add path if needed
+                    if (scene.id !in self.pathMemory!! && self.pathMemory.size < self.pathMemorySizeLimit!!)
+                        self.pathMemory.add(scene.id)
+
+                    // Evaluate available areaTransitions and choose one appropriately.
+                    val newTransitions = scene.actors.filter {
+                        it.areaTransitionId != null && it.areaTransitionId !in self.pathMemory
+                    }
+                    val knownTransitions = scene.actors.filter { it.areaTransitionId in self.pathMemory }
+                    val areaTransition = if (self.pathMemory.size >= self.pathMemorySizeLimit!!)
+                        knownTransitions.random()
+                    else if (newTransitions.isEmpty())
+                        knownTransitions.random()
+                    else
+                        newTransitions.random()
+
+                    // Add footprints
+                    scene.addActor(GolemFootprints(
+                        turnsUntilExpiration = 6, // for now
+                        additionalDescriptionLines = listOf(
+                            "\tSomething enormous made these footprints.",
+                            "\tThey lead towards ${areaTransition.name}..."
+                        )
+                    ))
+
+                    // Move the Golem
+                    Action.Use(Command(
+                        raw = "use ${areaTransition.name}",
+                        targetEnvironment = scene.actors,
+                    )).effect!!.invoke(scene, self, areaTransition)
+
+                    // Notify player if in the same Scene.
+                    scene.getPlayer()?.let {
+                        messages.add("The Golem's massive footsteps unsettle the ground as it leaves.")
+                    }
+                }
             }
             messages
         }
     )
 
-    class Flavor(
+    class GolemFootprints(
+        turnsUntilExpiration: Int,
+        additionalDescriptionLines: List<String>,
+    ) : Actor (
+        name = "Footprints",
+        timer = turnsUntilExpiration,
+        additionalDescriptionLines = additionalDescriptionLines,
+        behavior = { _, self ->
+            val messages = mutableListOf<String>()
+            self.timer = self.timer!! - 1
+            if (self.timer!! <= 0) self.kill()
+            messages
+        }
+    )
+
+    /**
+     * Pure Flavor is a catch-all for Actors which only serve to describe fluff and are otherwise non-interactive.
+     */
+    class PureFlavor(
         name: String,
-        flavorText: String,
+        additionalDescriptionLines: List<String>
     ) : Actor(
         name = name,
-        isFlavor = true,
-        interactiveEffect = { _, _, _ ->
-            listOf(flavorText + "\n")
+        additionalDescriptionLines = additionalDescriptionLines
+    )
+
+    class DoorTo(targetScene: Scene) : Actor(
+        name = "Door${targetScene.id}",
+        areaTransitionId = targetScene.id,
+        interactiveEffect = { scene, _, triggerer ->
+            val messages = mutableListOf<String>()
+            scene ?: error("Scene not found.")
+            triggerer ?: error("Triggering actor not found.")
+            val sceneMap = scene.parentSceneMap
+            sceneMap.activeScene ?: error("No active scene found in SceneMap.")
+            scene.removeActor(triggerer)
+            if (triggerer.isPlayer) {
+                scene.clearCameFrom()
+                sceneMap.changeScene(targetScene.id).let { id ->
+                    if (id == null) error("Invalid sceneId: ${targetScene.id}.")
+                    messages.add("You walk through the door to " + sceneMap.activeScene!!.name + ".")
+                    sceneMap.activeScene!!.markCameFrom(scene.id)
+                }
+            }
+            sceneMap.scenes[targetScene.id]!!.addActor(triggerer)
+            messages
         }
     )
 

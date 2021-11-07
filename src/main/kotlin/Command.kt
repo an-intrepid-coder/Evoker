@@ -12,11 +12,11 @@ val validCommands = listOf(
  * can be optionally adjusted by a list of potential modifiers, and in some cases a target which
  * depends on given context environment.
  */
-class UserCommand(
+class Command(
     private val raw: String,
     private val targetEnvironment: List<Actor>,
 ) {
-    var command: String? = null
+    var base: String? = null
     val potentialModifiers = mutableListOf<String>()
     var target: Actor? = null
 
@@ -34,7 +34,7 @@ class UserCommand(
             .lowercase()
             .split(" ")
 
-        command = words.firstOrNull { validCommands.contains(it) }
+        base = words.firstOrNull { validCommands.contains(it) }
         target = targets.firstOrNull { words.contains(it.second) }?.first
         words.forEach { word ->
             if (word !in validCommands && word !in targets.map { it.second })
@@ -43,6 +43,6 @@ class UserCommand(
     }
 
     fun printed(): String {
-        return "($command -> ${target?.name ?: "No Target"}; $potentialModifiers)"
+        return "($base -> ${target?.name ?: "No Target"}; $potentialModifiers)"
     }
 }

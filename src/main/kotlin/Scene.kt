@@ -20,36 +20,36 @@ val cellNames = listOf(
 )
 
 val cellFlavors = listOf(
-    Actor.Flavor(
+    Actor.PureFlavor(
         name = "floor",
-        flavorText = "The floor is covered in a fine layer of dust."
+        additionalDescriptionLines = listOf("The floor is covered in a fine layer of dust.")
     ),
-    Actor.Flavor(
+    Actor.PureFlavor(
         name = "floor",
-        flavorText = "The floor is covered in bloody hand- and foot-prints."
+        additionalDescriptionLines = listOf("The floor is covered in bloody hand- and foot-prints.")
     ),
-    Actor.Flavor(
+    Actor.PureFlavor(
         name = "walls",
-        flavorText = "The walls have bolts for restraining people with chains."
+        additionalDescriptionLines = listOf("The walls have bolts for restraining people with chains.")
     ),
-    Actor.Flavor(
+    Actor.PureFlavor(
         name = "walls",
-        flavorText = "The walls are windowless and bleak."
+        additionalDescriptionLines = listOf("The walls are windowless and bleak.")
     ),
-    Actor.Flavor(
+    Actor.PureFlavor(
         name = "walls",
-        flavorText = "The walls are covered in indecipherable scribblings."
+        additionalDescriptionLines = listOf("The walls are covered in indecipherable scribblings.")
     ),
-    Actor.Flavor(
+    Actor.PureFlavor(
         name = "air",
-        flavorText = "The air in this place is dank and evil."
+        additionalDescriptionLines = listOf("The air in this place is dank and evil.")
     ),
     // More to come
 )
 
 sealed class Scene(
     val name: String,
-    private val parentSceneMap: SceneMap,
+    val parentSceneMap: SceneMap,
 ) {
     val id = parentSceneMap.numScenes++
     var actors = mutableListOf<Actor>()
@@ -82,16 +82,16 @@ sealed class Scene(
             .toList()
     }
 
-    fun handleInput(userCommand: UserCommand): List<String>? {
-        if (userCommand.command == "exit")
+    fun handleInput(command: Command): List<String>? {
+        if (command.base == "exit")
             exitProcess(0)
-        else if (userCommand.command == "help") {
+        else if (command.base == "help") {
             return listOf("Valid Commands:").plus(validCommands)
         }
-        return action(userCommand)?.effect?.invoke(
-            parentSceneMap,
+        return action(command)?.effect?.invoke(
+            this,
             getPlayer(),
-            userCommand.target
+            command.target
         )
     }
 
@@ -103,7 +103,7 @@ sealed class Scene(
         var deadActors = listOf<Actor>()
         actors.forEach { actor ->
             actor.refreshInventory()?.let { deadActors = deadActors.plus(it) }
-            if (actor.isAlive() == false)
+            if (actor.isAlive() == false && actor.inventory?.isNotEmpty() != true && !actor.isPlayer)
                 deadActors = deadActors.plus(actor)
         }
         actors = actors.filter { it !in deadActors }.toMutableList()
@@ -121,20 +121,15 @@ sealed class Scene(
         parentSceneMap
     ) {
         init {
-            addActor(Actor.Flavor(
-                name = "note",
-                flavorText = "Pinned to the wall is a dirty note. It says:" +
-                        "\n'This is a test. Make it out of here and survive, or die in the attempt." +
-                        "\nI have prepared the way with both obstacles and boons." +
-                        "\nGood luck.'"
-            ))
-            addActor(Actor.Flavor(
+            addActor(Actor.PureFlavor(
                 name = "cell",
-                flavorText = "You don't remember how long you've been here." +
-                        "\nIn fact, you don't remember anything prior to this filthy cell." +
-                        "\nHow long have you been here? Who are you?" +
-                        "\nFor some reason your cell door is wide open." +
-                        "\nThere is nothing stopping you from walking out..."
+                additionalDescriptionLines = listOf(
+                    "\tYou don't remember how long you've been here.",
+                    "\tIn fact, you don't remember anything prior to this filthy cell.",
+                    "\tHow long have you been here? Who are you?",
+                    "\tFor some reason your cell door is wide open.",
+                    "\tThere is nothing stopping you from walking out..."
+                )
             ))
             Hallway(parentSceneMap, this).let { hallway ->
                 addActor(Actor.DoorTo(hallway))
@@ -144,7 +139,11 @@ sealed class Scene(
         }
     }
 
-    class Hallway(
+    /**
+     * Hallways serve as the main vehicles of map generation. Their number is limited in the SceneMap to
+     * avoid infinite growth.
+     */
+    class Hallway( // TODO: More Hallway types.
         parentSceneMap: SceneMap,
         cameFrom: Scene,
     ) : Scene(
@@ -175,6 +174,10 @@ sealed class Scene(
         }
     }
 
+    /**
+     * Cells serve as end-nodes for the SceneMap, for now.
+     */
+    // TODO: More kinds of end-nodes.
     class Cell(
         parentSceneMap: SceneMap,
         cameFrom: Scene

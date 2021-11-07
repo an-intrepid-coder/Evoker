@@ -15,17 +15,21 @@ class EvokerGame {
                     messageLog.messageIn(msg)
                 }
                 messageLog.outputAll().forEach { println(it) }
-                turn++
-                println("(turn $turn) Enter Command: ")
 
+                println("(turn $turn) Enter Command: ")
                 readLine()?.let { userInput ->
-                    val userCommand = UserCommand(userInput, activeScene.actors)
-                    println(">>>\t" + userCommand.printed())
-                    activeScene.handleInput(userCommand)?.forEach { msg ->
+                    turn++
+                    val command = Command(userInput, activeScene.actors)
+                    println(">>>\t" + command.printed())
+                    activeScene.handleInput(command)?.forEach { msg ->
+                        messageLog.messageIn(msg)
+                    }
+                    sceneMap.behaviorCheck().forEach { msg ->
                         messageLog.messageIn(msg)
                     }
 
                     val deadActors = activeScene.refreshActors()
+                    // TODO: Some actors will cause effects or change into other kinds of Actors once destroyed.
                 }
             }
         }
