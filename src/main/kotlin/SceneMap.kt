@@ -1,9 +1,9 @@
-class SceneMap {
+class SceneMap(val parentGame: EvokerGame) {
     var numScenes = 0
     val scenes = mutableMapOf<Int, Scene>()
     var activeScene: Scene? = null
 
-    val maxHallways = 3 // for now
+    val maxHallways = 3 // for now, but the game will be bigger when it's further along.
     var numHallways = 0
 
     // TODO: A variety of switches and triggers to guide map generation.
@@ -14,6 +14,46 @@ class SceneMap {
             activeScene!!.addActor(Actor.Player())
         }
         scenes.values.random().addActor(Actor.WanderingGolem())
+    }
+
+    /**
+     * This is a debugging function which prints all available information on the SceneMap's graph and the
+     * status of each Scene. I may adapt it later into a number of in-game functions, but for now it is a debugging
+     * function only.
+     */
+    fun printSceneMap(): List<String> {
+        val messages = mutableListOf<String>()
+
+        fun printScenesAsTree(
+            depth: Int,
+            node: Scene,
+            seen: List<Scene>,
+        ) {
+            val playerHere = node.getPlayer() != null
+            val golemHere = node.actors.any { it.name == "Golem" }
+            var line = ""
+            repeat (depth) { line += " " }
+            if (depth > 0) line += "|_"
+            line += "Scene #${node.id} | ${node.name} | @=$playerHere " +
+                    "| Gol.=$golemHere | Wtr.=${node.waterLevel.waterLevelType} | flooding=${node.floodSource}"
+            messages.add(line)
+            node.neighbors().let { neighbors ->
+                neighbors.asSequence()
+                    .filter { it !in seen }
+                    .forEachIndexed { index, neighbor ->
+                        printScenesAsTree(
+                            depth = depth + 1,
+                            node = neighbor,
+                            seen = seen.plus(node),
+                        )
+                    }
+            }
+        }
+
+        val node = activeScene ?: error("No Active Scene!")
+        printScenesAsTree(0, node, listOf())
+
+        return messages
     }
 
     fun canAddHallways(): Boolean {
@@ -40,11 +80,6 @@ class SceneMap {
      * returning the list of messages which results from their actions, if any.
      */
     fun behaviorCheck(): List<String> {
-        /*
-            Debug Note: Will need to find another way to do this, as it currently causes a concurrency
-                exception. The idea is sound, but the syntax is off, as no concurrency error would occur.
-                Best to find the idiom for it.
-         */
         val messages = mutableListOf<String>()
         val actorsWithBehavior = mutableMapOf<Actor, Scene>()
         scenes.values.forEach { scene ->
