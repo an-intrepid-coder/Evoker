@@ -1,6 +1,7 @@
 class EvokerGame {
+    var debugMode = true
     var turn: Int = 0
-    val sceneMap = SceneMap()
+    val sceneMap = SceneMap(this)
     val messageLog = MessageLog()
 
     private fun gameOver(): Boolean {

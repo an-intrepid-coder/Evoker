@@ -1,10 +1,12 @@
 val validCommands = listOf(
+    "wait",
     "strike",
     "examine",
     "use",
     "loot",
     "help",
-    "exit"
+    "exit",
+    "debug"
 )
 
 /**
