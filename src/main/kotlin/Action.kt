@@ -2,20 +2,45 @@ fun action(command: Command): Action? {
     return command.base.let { baseCommand ->
         when (baseCommand) {
             null -> null
+            "wait" -> Action.Wait(command)
             "strike" -> Action.Strike(command)
             "examine" -> Action.Examine(command)
             "use" -> Action.Use(command)
             "loot" -> Action.Loot(command)
+            "debug" -> Action.Debug(command)
             // More action types to come
             else -> error("Invalid command.")
         }
     }
 }
 
+val waitingLines = listOf(
+    "You twiddle your thumbs for a bit.",
+    "You procrastinate like a pro.",
+    "You are lost in thought for a moment.",
+    "You stare at your feet for a bit.",
+    "You quietly laugh at a funny joke you just thought of.",
+    "You focus your concentration.",
+    "You take a few deep breaths.",
+    "You plan your next move.",
+    "You hum a tune.",
+)
+
 sealed class Action(
     val command: Command,
     val effect: ((Scene?, Actor?, Actor?) -> List<String>)? = null
 ) {
+    class Wait(command: Command) : Action(
+        command = command,
+        effect = { _, self, _ ->
+            val messages = mutableListOf<String>()
+            self?.isPlayer?.let {
+                messages.add(waitingLines.random())
+            }
+            messages
+        }
+    )
+
     class Strike(command: Command) : Action(
         command = command,
         effect = { _, _, target ->
@@ -80,6 +105,20 @@ sealed class Action(
                 target.transferInventory(self!!)
             else if (target.inventory != null && !target.lootable)
                 messages.add("That is not lootable at the moment.")
+            messages
+        }
+    )
+
+    class Debug(command: Command) : Action(
+        command = command,
+        effect = { scene, self, target ->
+            val messages = mutableListOf<String>()
+            scene?.parentSceneMap?.parentGame?.debugMode?.let {
+                if (command.potentialModifiers.contains("map")) {
+                    scene.parentSceneMap.printSceneMap().forEach { messages.add(it) }
+                }
+                // There will be more debug modifiers eventually.
+            }
             messages
         }
     )
