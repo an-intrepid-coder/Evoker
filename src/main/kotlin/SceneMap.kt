@@ -40,7 +40,7 @@ class SceneMap(val parentGame: EvokerGame) {
             node.neighbors().let { neighbors ->
                 neighbors.asSequence()
                     .filter { it !in seen }
-                    .forEachIndexed { index, neighbor ->
+                    .forEach { neighbor ->
                         printScenesAsTree(
                             depth = depth + 1,
                             node = neighbor,
@@ -95,5 +95,16 @@ class SceneMap(val parentGame: EvokerGame) {
             }
         }
         return messages
+    }
+
+    /**
+     * Refreshes the Actor list in all Scenes and returns the complete list of expired Actors.
+     */
+    fun refreshAllActors(): List<Actor> {
+        val deadActors = mutableListOf<Actor>()
+        scenes.values.forEach { scene ->
+            scene.refreshActors().forEach { deadActors.add(it) }
+        }
+        return deadActors
     }
 }
