@@ -9,15 +9,8 @@ class EvokerGame {
      * will get more complex over time.
      */
     private fun renderGame() {
-        messageLog.outputAll().forEach { println(it) }
+        messageLog.outputAll().forEach { println(it.text) }
     }
-
-    /*
-        Concurrency Development Step in Progress. Notes:
-            - First step is a lot of refactoring and decoupling. TODO
-            - The biggest concurrency issue right now is message passing. The order in which they are handled
-                matters. I would need to do something very different with them to make it parallel? TODO
-     */
 
     /**
      * The gameLoop has interactive and non-interactive modes.
@@ -50,10 +43,7 @@ class EvokerGame {
                 }
             }
 
-            activeScene.describeScene().forEach { msg ->
-                // TODO: Refactoring. but how, exactly?
-                messageLog.messageIn(msg)
-            }
+            activeScene.describeScene().forEach { messageLog.messageIn(turn, it) }
 
             if (!autoPlaying) {
                 renderGame()
@@ -67,15 +57,9 @@ class EvokerGame {
             }
             if (!autoPlaying) println(">>>\t" + command.printed())
 
-            activeScene.handleInput(command)?.forEach { msg ->
-                // TODO: Refactoring.
-                messageLog.messageIn(msg)
-            }
+            activeScene.handleInput(command)?.forEach { messageLog.messageIn(turn, it) }
 
-            sceneMap.behaviorCheck().forEach { msg ->
-                // TODO: Refactoring.
-                messageLog.messageIn(msg)
-            }
+            sceneMap.behaviorCheck().forEach { messageLog.messageIn(turn, it) }
 
             val deadActors = sceneMap.refreshAllActors()
             // TODO: Some Actors will drop things or change into other Actors on death, or otherwise affect the game.

@@ -126,7 +126,7 @@ sealed class Scene(
     val id = parentSceneMap.numScenes++
     var actors = mutableListOf<Actor>()
 
-    fun neighbors(): List<Scene> { // TODO: Test this works
+    fun neighbors(): List<Scene> {
         val areaTransitions = actors.asSequence()
             .filter { it.areaTransitionId != null }
             .map { it.areaTransitionId }
