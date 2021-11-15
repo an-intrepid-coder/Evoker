@@ -111,11 +111,14 @@ sealed class Action(
 
     class Debug(command: Command) : Action(
         command = command,
-        effect = { scene, self, target ->
+        effect = { scene, _, _ ->
             val messages = mutableListOf<String>()
             scene?.parentSceneMap?.parentGame?.debugMode?.let {
                 if (command.potentialModifiers.contains("map")) {
                     scene.parentSceneMap.printSceneMap().forEach { messages.add(it) }
+                }
+                if (command.potentialModifiers.contains("log")) {
+                    scene.parentSceneMap.parentGame.messageLog.readMessages.forEach { messages.add(it.toString()) }
                 }
                 // There will be more debug modifiers eventually.
             }
