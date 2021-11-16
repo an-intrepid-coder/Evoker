@@ -217,6 +217,12 @@ sealed class Scene(
                     "\tThere is nothing stopping you from walking out..."
                 )
             ))
+
+            addActor(Actor.GenericChest(listOf(
+                Actor.Nectar(),
+                Actor.Aquatome()
+            )))
+
             Hallway(parentSceneMap, this).let { hallway ->
                 addActor(Actor.DoorTo(hallway))
                 parentSceneMap.numHallways++
