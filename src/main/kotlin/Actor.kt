@@ -1,4 +1,9 @@
-val floodWaterTimer = 20 // for now. This arbitrary value is subject to balance changes down the road.
+const val floodWaterTimer = 20 // for now. This arbitrary value is subject to balance changes down the road.
+
+enum class ElementType {
+    WATER,
+    // More to come!
+}
 
 /**
  * Actors include not just creatures and the player, but any object which can be interacted
@@ -22,7 +27,9 @@ sealed class Actor(
     var retaliating: Boolean? = null,
     val pathMemory: MutableList<Int>? = null,
     val pathMemorySizeLimit: Int? = null,
-    // more params to come
+    val spellBook: MutableSet<String> = mutableSetOf(),
+    val elementalAttunements: MutableSet<ElementType> = mutableSetOf()
+    // more params to come.
 ) {
     var health = maxHealth
 
@@ -149,6 +156,8 @@ sealed class Actor(
 
                 TODO: Some sort of puzzle-oriented way of fighting the creature for the player, and a reason for
                     doing so.
+
+                TODO: Cause rooms to spring a leak when the golem walks by, sometimes.
              */
             val messages = mutableListOf<String>()
             when (self.retaliating) {
@@ -267,7 +276,11 @@ sealed class Actor(
                 messages
             }
         }
-    )
+    ) {
+        init {
+            elementalAttunements.add(ElementType.WATER)
+        }
+    }
 
     /**
      * Pure Flavor is a catch-all for Actors which only serve to describe fluff and are otherwise non-interactive.

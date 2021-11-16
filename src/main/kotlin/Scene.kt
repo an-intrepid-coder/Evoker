@@ -56,6 +56,7 @@ sealed class WaterLevel(val waterLevelType: WaterLevelType) {
         WAIST, // extra movement cost, unable to perform some actions
         CHEST, // extra movement cost, unable to perform most actions
         UNDERWATER, // turn-by-turn damage and swept into adjacent rooms with the flow of water, if possible.
+                    // Unless the player is attuned to water, in which case it will be harmless.
         // * Extra movement cost can be an increasing chance of losing a turn.
     }
 
@@ -155,11 +156,16 @@ sealed class Scene(
     }
 
     fun describeScene(): List<String> {
+        val waterLine = when (waterLevel.waterLevelType) {
+            WaterLevel.WaterLevelType.NONE -> listOf()
+            else -> listOf("There is water here. Water level: ${waterLevel.waterLevelType}")
+        }
         return actors
             .asSequence()
             .filter { !it.isPlayer }
             .map { it.description(brief = true) }
             .toList()
+            .plus(waterLine)
     }
 
     fun handleInput(command: Command): List<String>? {
@@ -236,6 +242,8 @@ sealed class Scene(
             addActor(Actor.DoorTo(cameFrom))
             repeat (additionalConnections) {
                 if (!addedHallway && parentSceneMap.canAddHallways()) {
+                    // Note: For now, this avoids having more than one hallway extend from any given hallway. This
+                    //  is an arbitrary limitation, and I will eventually change it to create more interesting maps.
                     parentSceneMap.numHallways++
                     Hallway(parentSceneMap, this).let { hallway ->
                         addActor(Actor.DoorTo(hallway))

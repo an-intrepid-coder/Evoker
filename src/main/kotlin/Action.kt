@@ -2,6 +2,7 @@ fun action(command: Command): Action? {
     return command.base.let { baseCommand ->
         when (baseCommand) {
             null -> null
+            "water" -> Action.Water(command)
             "wait" -> Action.Wait(command)
             "strike" -> Action.Strike(command)
             "examine" -> Action.Examine(command)
@@ -26,10 +27,74 @@ val waitingLines = listOf(
     "You hum a tune.",
 )
 
+/**
+ * Actions are anything which takes an in-game turn, from waiting to casting spells. Each Action can have a number
+ * of modifiers, which will change the action. Sometimes these modifiers can be combined, and other times they
+ * are mutually exclusive.
+ *
+ * Note: When an Actor becomes attuned to an element, including the player as a result of using a Spell, they
+ * will remain attuned until they do something to change this. Since each attunement will have positive and negative
+ * effects, and the player can have multiple attunements at once, the player will need to carefully manage which spells
+ * they use, and when. This system is not very fleshed out yet.
+ *
+ * Note: No "Magic Point" system is implemented yet. Currently, I'm not even sure I want to keep the "Health Point"
+ * system. The jury is still out on how to balance these things. Early days.
+ */
 sealed class Action(
     val command: Command,
-    val effect: ((Scene?, Actor?, Actor?) -> List<String>)? = null
+    val isSpell: Boolean = false,
+    val effect: ((Scene?, Actor?, Actor?) -> List<String>)? = null,
 ) {
+
+    /**
+     * Using the Water action without a modifier causes the player to be temporarily attuned with the element of
+     * water, which has effects in gameplay. This effect will happen in addition to any modifiers put on the Action,
+     * making it a strategic choice (once the game is more developed). Possible modifiers are:
+     *
+     * "lower" lowers the water level in the Scene if the water level is greater than NONE.
+     *
+     * "raise" raises the water level in the Scene if the water level is below UNDERWATER. "raise" and "lower" can
+     * cancel each other out.
+     */
+    class Water(command: Command) : Action(
+        command = command,
+        isSpell = true,
+        effect = { scene, self, _ ->
+            self ?: error("No caller found.")
+            scene ?: error("No Scene found.")
+            val messages = mutableListOf<String>()
+
+            if (self.spellBook.contains("water")) {
+                if (!self.elementalAttunements.contains(ElementType.WATER)) {
+                    self.elementalAttunements.add(ElementType.WATER)
+                    messages.add("${self.name} is now attuned to the element of water.")
+                }
+                if (command.potentialModifiers.contains("lower")) {
+                    if (scene.waterLevel.waterLevelType == WaterLevel.WaterLevelType.NONE)
+                        messages.add("There is no water here!")
+                    else {
+                        scene.waterLevel = scene.waterLevel.decrement()
+                        messages.add("The water level decreases.")
+                    }
+                }
+                if (command.potentialModifiers.contains("raise")) {
+                    if (scene.waterLevel.waterLevelType == WaterLevel.WaterLevelType.UNDERWATER)
+                        messages.add("This place is already under water!")
+                    else {
+                        scene.waterLevel = scene.waterLevel.increment()
+                        messages.add("The water level increases.")
+                    }
+                }
+            } else messages.add("You don't know that spell.")
+
+            messages
+        }
+    )
+
+    /**
+     * Waiting does nothing but advance the simulation a turn, for now. I will eventually include mechanics which
+     * make waiting a tactical choice.
+     */
     class Wait(command: Command) : Action(
         command = command,
         effect = { _, self, _ ->
@@ -41,6 +106,11 @@ sealed class Action(
         }
     )
 
+    /**
+     * Striking does 1 damage to anything which can take damage. This may change eventually, but striking is
+     * unlikely to play a major part in the game's combat and will be reserved for specific problems which can be
+     * solved that way, such as breaking certain objects.
+     */
     class Strike(command: Command) : Action(
         command = command,
         effect = { _, _, target ->
@@ -63,6 +133,9 @@ sealed class Action(
         }
     )
 
+    /**
+     * Examine displays the full description of the targeted Actor.
+     */
     class Examine(command: Command) : Action(
         command = command,
         effect = { _, _, target ->
@@ -76,6 +149,9 @@ sealed class Action(
         }
     )
 
+    /**
+     * Some Actors have an interactiveEffect which is invoked when another Actor uses them. For example, Doors.
+     */
     class Use(command: Command) : Action(
         command = command,
         effect = { scene, self, target ->
@@ -91,6 +167,10 @@ sealed class Action(
         }
     )
 
+    /**
+     * The Loot action transfers an entire inventory from a lootable object to the player. In the future I may
+     * make this process more fine-grained.
+     */
     class Loot(command: Command) : Action(
         command = command,
         effect = { _, self, target ->
@@ -109,6 +189,11 @@ sealed class Action(
         }
     )
 
+    /**
+     * Various debugging options which are implemented as modifiers on the "debug" command. For example,
+     * "debug map" or "debug log". You can have multiple modifiers; for example "debug map log" will both
+     * display the SceneMap as a tree and all previously seen Messages.
+     */
     class Debug(command: Command) : Action(
         command = command,
         effect = { scene, _, _ ->
