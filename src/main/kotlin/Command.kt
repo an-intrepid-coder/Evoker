@@ -16,7 +16,7 @@ val validCommands = listOf(
  * depends on given context environment.
  */
 class Command(
-    private val raw: String,
+    val raw: String,
     private val targetEnvironment: List<Actor>,
 ) {
     var base: String? = null
@@ -46,6 +46,8 @@ class Command(
     }
 
     fun printed(): String {
+        // TODO: Minor Bug: When using the "my" modifier on the Use command, it does not show the
+        //  re-interpreted Command but rather the original.
         return "($base -> ${target?.name ?: "No Target"}; $potentialModifiers)"
     }
 }
