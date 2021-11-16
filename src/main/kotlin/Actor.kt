@@ -132,7 +132,7 @@ sealed class Actor(
         name = "Player",
         isPlayer = true,
         maxHealth = 10,
-        inventory = mutableListOf()
+        inventory = mutableListOf(),
     )
 
     class WanderingGolem : Actor(
@@ -316,9 +316,13 @@ sealed class Actor(
         }
     )
 
-    class HealingPotion : Actor(
-        name = "Healing Potion",
+    class Nectar : Actor(
+        name = "Nectar",
         maxHealth = 1,
+        additionalDescriptionLines = listOf(
+            "\tThis softly glowing vial is full of a substance known as 'nectar'.",
+            "\tIt is known for its curative properties."
+        ),
         interactiveEffect = { _, self, triggerer ->
             // Heals the user and then self-destructs.
             val messages = mutableListOf<String>()
@@ -336,16 +340,54 @@ sealed class Actor(
         }
     )
 
-    class PotionChest : Actor(
+    class GenericChest(
+        inventory: List<Actor>,
+        locked: Boolean = false
+    ) : Actor(
         name = "Chest",
         maxHealth = 5,
-        inventory = mutableListOf(randomPotion()), // for now
+        inventory = inventory.toMutableList(),
+        locked = locked,
+        lootable = true
     )
+
+    class Aquatome : Actor(
+        name = "Aquatome",
+        maxHealth = 1, // The health of this object may change as the game develops
+        additionalDescriptionLines = listOf(
+            "\tThis spellbook teaches the secrets of water magic.",
+            "\tAt its most basic, water magic attunes the caster to its element.",
+            "\tIt can also be used to raise or lower the water level in an area.",
+            // more to come
+        ),
+        interactiveEffect = { scene, self, triggerer ->
+            triggerer ?: error("Triggering actor not found.")
+
+            val messages = mutableListOf<String>()
+
+            if (triggerer.spellBook.contains("water")) {
+                if (triggerer.isPlayer)
+                    messages.add("You already know the secrets of this book.")
+            } else {
+                triggerer.spellBook.add("water")
+                if (triggerer.isPlayer)
+                    messages.add("You learn the secrets of water magic!")
+            }
+
+            messages
+        },
+    ) {
+        init { elementalAttunements.add(ElementType.WATER) }
+        /*
+            Note: I'm thinking of allowing the spellbooks to be harmed or improved or otherwise altered when spells are
+            used on them, in which case their elemental attunement may matter.
+         */
+    }
 }
 
 fun randomPotion(): Actor {
     return listOf(
-        Actor.HealingPotion(),
+        Actor.Nectar(),
         // more to come
     ).random()
 }
