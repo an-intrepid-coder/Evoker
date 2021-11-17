@@ -213,7 +213,7 @@ sealed class Actor(
 
                     // There is a chance that the Golem will cause a room to spring a leak when it moves:
                     val leakChance = 1
-                    if (withChance(100, leakChance)) {
+                    if (withChance(100, leakChance) && !scene.floodSource) {
                         scene.floodSource = true
                         scene.addActor(FloodWater())
                         scene.getPlayer()?.let {

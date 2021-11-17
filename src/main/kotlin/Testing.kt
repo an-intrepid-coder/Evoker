@@ -8,7 +8,11 @@ data class TestResult(val passed: Boolean, val infoText: String)
 
 /**
  * A very simple test which makes sure that none of the emergent and procedural systems will cause a crash over time,
- * if left to their own devices.
+ * if left to their own devices. Currently, measures the following metrics:
+ *
+ * 1. Average time required to simulate the given number of turns per test.
+ * 2. Average number of FloodWater Actors at the end of each test. This is to ensure that no exponential growth is
+ *    happening.
  */
 @OptIn(ExperimentalTime::class)
 suspend fun parallelStressTest(
@@ -17,18 +21,28 @@ suspend fun parallelStressTest(
 ): TestResult {
     var sampleSize = 0
     var averageTime = 0.0
+    var floodWaterAverage = 0
     coroutineScope {
         repeat (numTests) {
             launch {
-                val time = measureTime { EvokerGame().passiveCrashTest(numTurnsPerTest) }
+                val game = EvokerGame()
+                val time = measureTime { game.passiveCrashTest(numTurnsPerTest) }
                 averageTime += time.toDouble(DurationUnit.SECONDS)
+                floodWaterAverage += game.sceneMap.scenes.values.asSequence()
+                    .map { it.actors }
+                    .map { it.filter { it.name == "Water" } }
+                    .flatten()
+                    .toList()
+                    .size
                 sampleSize++
             }
         }
     }
     averageTime /= sampleSize
+    floodWaterAverage /= sampleSize
     return TestResult(
         passed = true,
-        infoText = "Average time over $numTests tests w/ $numTurnsPerTest turns/test: $averageTime seconds."
+        infoText = "Average time over $numTests tests w/ $numTurnsPerTest turns/test: $averageTime seconds." +
+                "\nAverage # of FloodWater Actors per test: $floodWaterAverage"
     )
 }

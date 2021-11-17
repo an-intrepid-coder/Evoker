@@ -75,14 +75,9 @@ class EvokerGame {
     }
 
     /**
-     * This function currently spawns a passive player, some golems, and some water and runs them for numTurns,
-     * ensuring that nothing will crash. Eventually it will be more elaborate.
+     * Simply runs to see if the game will crash if left to its own devices for long enough.
      */
     fun passiveCrashTest(numTests: Int) {
-        sceneMap.scenes.values.random().addActor(Actor.WanderingGolem())
-        sceneMap.scenes.values.random().addActor(Actor.WanderingGolem())
-        sceneMap.scenes.values.random().addActor(Actor.FloodWater())
-        sceneMap.scenes.values.random().addActor(Actor.FloodWater())
         gameLoop(numTests)
     }
 }
