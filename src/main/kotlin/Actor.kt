@@ -210,6 +210,17 @@ sealed class Actor(
                     scene.getPlayer()?.let {
                         messages.add("The Golem's massive footsteps unsettle the ground as it leaves.")
                     }
+
+                    // There is a chance that the Golem will cause a room to spring a leak when it moves:
+                    val leakChance = 1
+                    if (withChance(100, leakChance)) {
+                        scene.floodSource = true
+                        scene.addActor(FloodWater())
+                        scene.getPlayer()?.let {
+                            messages.add("Water begins to pour through a crack in the wall!")
+                        }
+                    }
+
                 }
             }
             messages
@@ -263,7 +274,7 @@ sealed class Actor(
                     WaterLevel.WaterLevelType.WAIST -> listOf("The water is up to your waist.")
                     WaterLevel.WaterLevelType.CHEST-> listOf("The water is up to your chest.")
                     WaterLevel.WaterLevelType.UNDERWATER-> listOf("You are submerged under water.")
-                    WaterLevel.WaterLevelType.NONE -> error("This should never happen!")
+                    WaterLevel.WaterLevelType.NONE -> listOf("The floor is slippery and wet..")
                 }
 
                 scene.neighbors().forEach { neighbor ->
