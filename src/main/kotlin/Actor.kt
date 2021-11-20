@@ -28,7 +28,9 @@ sealed class Actor(
     val pathMemory: MutableList<Int>? = null,
     val pathMemorySizeLimit: Int? = null,
     val spellBook: MutableSet<String> = mutableSetOf(),
-    val elementalAttunements: MutableSet<ElementType> = mutableSetOf()
+    val attunements: MutableSet<AttunementType> = mutableSetOf(),
+    val activeSceneShields: MutableList<Scene> = mutableListOf(),
+    val shieldBreaker: Boolean = false
     // more params to come.
 ) {
     var health = maxHealth
@@ -224,7 +226,8 @@ sealed class Actor(
                 }
             }
             messages
-        }
+        },
+        shieldBreaker = true,
     )
 
     class GolemFootprints(
@@ -257,7 +260,7 @@ sealed class Actor(
                 self.kill()
                 messages
             } else {
-                if (scene.floodSource) {
+                if (scene.floodSource && scene.shielded == null) {
                     scene.actors.removeAll { it.name == "Footprints" }
                     self.timer = self.timer!! - 1
                     if (self.timer == 0) {
@@ -278,7 +281,8 @@ sealed class Actor(
                 }
 
                 scene.neighbors().forEach { neighbor ->
-                    if (neighbor.waterLevel.waterLevelType == WaterLevel.WaterLevelType.NONE) {
+                    if (neighbor.waterLevel.waterLevelType == WaterLevel.WaterLevelType.NONE &&
+                            neighbor.shielded == null) {
                         neighbor.waterLevel = neighbor.waterLevel.increment()
                         neighbor.addActor(FloodWater())
                     }
@@ -313,16 +317,38 @@ sealed class Actor(
             triggerer ?: error("Triggering actor not found.")
             val sceneMap = scene.parentSceneMap
             sceneMap.activeScene ?: error("No active scene found in SceneMap.")
-            scene.removeActor(triggerer)
-            if (triggerer.isPlayer) {
-                scene.clearCameFrom()
-                sceneMap.changeScene(targetScene.id).let { id ->
-                    if (id == null) error("Invalid sceneId: ${targetScene.id}.")
-                    messages.add("You walk through the door to " + sceneMap.activeScene!!.name + ".")
-                    sceneMap.activeScene!!.markCameFrom(scene.id)
-                }
+            val playerInScene = scene.getPlayer() != null
+
+            fun playerBlockedByShield(): Boolean {
+                return targetScene.shielded != null
+                        && triggerer.isPlayer
+                        && !triggerer.activeSceneShields.contains(scene)
             }
-            sceneMap.scenes[targetScene.id]!!.addActor(triggerer)
+
+            fun blockedByShield(): Boolean {
+                return targetScene.shielded != null
+                        && !triggerer.activeSceneShields.contains(targetScene)
+                        && !triggerer.shieldBreaker
+            }
+
+            if (playerBlockedByShield()) {
+                messages.add("A shimmering shield blocks your path.")
+            } else if (blockedByShield() && playerInScene) {
+                messages.add("${triggerer.name} blocked by shield magic.")
+            } else if (!blockedByShield()) {
+                scene.removeActor(triggerer)
+                if (triggerer.isPlayer) {
+                    scene.clearCameFrom()
+                    sceneMap.changeScene(targetScene.id).let { id ->
+                        if (id == null) error("Invalid sceneId: ${targetScene.id}.")
+                        messages.add("You walk through the door to " + sceneMap.activeScene!!.name + ".")
+                        sceneMap.activeScene!!.markCameFrom(scene.id)
+                        handleDuplicateActors(sceneMap.activeScene!!.actors)
+                    }
+                }
+                sceneMap.scenes[targetScene.id]!!.addActor(triggerer)
+            }
+
             messages
         }
     )
@@ -393,6 +419,24 @@ sealed class Actor(
             Note: I'm thinking of allowing the spellbooks to be harmed or improved or otherwise altered when spells are
             used on them, in which case their elemental attunement may matter.
          */
+    }
+
+    class ShieldTome : Actor(
+        name = "Shieldtome",
+        maxHealth = 1,
+        additionalDescriptionLines = listOf(
+            "\tThis spellbook teaches the secrets of shield magic.",
+            "\tAt its most basic, shield magic covers the caster in a damage-mitigating shield.",
+            "\tIt can also be used to shield an entire area from enemies or the environment.",
+        ),
+        interactiveEffect = { _, _, triggerer ->
+            triggerer ?: error("Triggering actor not found.")
+            val messages = mutableListOf<String>()
+            triggerer.addSpell("shield")?.let { messages.add(it) }
+            messages
+        }
+    ) {
+        init { attunements.add(AttunementType.SHIELD) }
     }
 }
 

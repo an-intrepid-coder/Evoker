@@ -35,7 +35,8 @@ class SceneMap(val parentGame: EvokerGame) {
             repeat (depth) { line += " " }
             if (depth > 0) line += "|_"
             line += "Scene #${node.id} | ${node.name} | @=$playerHere " +
-                    "| Gol.=$golemHere | Wtr.=${node.waterLevel.waterLevelType} | flooding=${node.floodSource}"
+                    "| Gol.=$golemHere | Wtr.=${node.waterLevel.waterLevelType} | flooding=${node.floodSource} " +
+                    "| Shield=${node.shielded}"
             messages.add(line)
             node.neighbors().let { neighbors ->
                 neighbors.asSequence()
@@ -94,6 +95,20 @@ class SceneMap(val parentGame: EvokerGame) {
                 messages.add(msg)
             }
         }
+        return messages
+    }
+
+    fun shieldCheck(): List<String> {
+        val messages = mutableListOf<String>()
+        scenes.values.asSequence()
+            .filter { it.shielded != null }
+            .forEach { scene ->
+                scene.shielded = scene.shielded!! - 1
+                if (scene.shielded == 0) {
+                    scene.shielded = null
+                    scene.getPlayer()?.let { messages.add("The shield in this area shimmers before disappearing.") }
+                }
+            }
         return messages
     }
 

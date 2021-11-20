@@ -61,6 +61,8 @@ class EvokerGame {
 
             sceneMap.behaviorCheck().forEach { messageLog.messageIn(turn, it) }
 
+            sceneMap.shieldCheck().forEach { messageLog.messageIn(turn, it) }
+
             val deadActors = sceneMap.refreshAllActors()
             // TODO: Some Actors will drop things or change into other Actors on death, or otherwise affect the game.
         }

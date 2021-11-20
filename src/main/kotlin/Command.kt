@@ -1,5 +1,6 @@
 val validCommands = listOf(
     "water",
+    "shield",
     "wait",
     "strike",
     "examine",

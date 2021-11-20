@@ -123,6 +123,7 @@ sealed class Scene(
     val parentSceneMap: SceneMap,
     var waterLevel: WaterLevel = WaterLevel.None(),
     var floodSource: Boolean = false,
+    var shielded: Int? = null,
 ) {
     val id = parentSceneMap.numScenes++
     var actors = mutableListOf<Actor>()
@@ -160,12 +161,23 @@ sealed class Scene(
             WaterLevel.WaterLevelType.NONE -> listOf()
             else -> listOf("There is water here. Water level: ${waterLevel.waterLevelType}")
         }
+        val shieldLine = when (shielded) {
+            null -> listOf()
+            else -> {
+                val player = getPlayer() ?: error("Player not found.")
+                if (player.activeSceneShields.contains(this))
+                    listOf("This room is shielded by your magic.")
+                else
+                    listOf("This room is shielded by magic.")
+            }
+        }
         return actors
             .asSequence()
             .filter { !it.isPlayer }
             .map { it.description(brief = true) }
             .toList()
             .plus(waterLine)
+            .plus(shieldLine)
     }
 
     fun handleInput(command: Command): List<String>? {
