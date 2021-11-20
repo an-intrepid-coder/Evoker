@@ -9,27 +9,27 @@ val cellNames = listOf(
 )
 
 val cellFlavors = listOf(
-    Actor.PureFlavor(
+    PureFlavor(
         name = "floor",
         additionalDescriptionLines = listOf("\tThe floor is covered in a fine layer of dust.")
     ),
-    Actor.PureFlavor(
+    PureFlavor(
         name = "floor",
         additionalDescriptionLines = listOf("\tThe floor is covered in bloody hand- and foot-prints.")
     ),
-    Actor.PureFlavor(
+    PureFlavor(
         name = "walls",
         additionalDescriptionLines = listOf("\tThe walls have bolts for restraining people with chains.")
     ),
-    Actor.PureFlavor(
+    PureFlavor(
         name = "walls",
         additionalDescriptionLines = listOf("\tThe walls are windowless and bleak.")
     ),
-    Actor.PureFlavor(
+    PureFlavor(
         name = "walls",
         additionalDescriptionLines = listOf("\tThe walls are covered in indecipherable scribblings.")
     ),
-    Actor.PureFlavor(
+    PureFlavor(
         name = "air",
         additionalDescriptionLines = listOf("\tThe air in this place is dank and evil.")
     ),
@@ -49,7 +49,7 @@ class Cell(
     leafNode = true
 ) {
     init {
-        addActor(Actor.DoorTo(cameFrom))
+        addActor(DoorTo(cameFrom))
         addActor(cellFlavors.random())
         // TODO: Perhaps potential enemies and loot?
     }

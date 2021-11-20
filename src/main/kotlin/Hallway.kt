@@ -22,14 +22,14 @@ class Hallway( // TODO: More Hallway types.
     init {
         val additionalConnections = (1..3).random() // for now; may adjust this
         var addedHallway = false
-        addActor(Actor.DoorTo(cameFrom))
+        addActor(DoorTo(cameFrom))
         repeat (additionalConnections) {
             if (!addedHallway && parentSceneMap.canAddHallways()) {
                 // Note: For now, this avoids having more than one hallway extend from any given hallway. This
                 //  is an arbitrary limitation, and I will eventually change it to create more interesting maps.
                 parentSceneMap.numHallways++
                 Hallway(parentSceneMap, this).let { hallway ->
-                    addActor(Actor.DoorTo(hallway))
+                    addActor(DoorTo(hallway))
                     parentSceneMap.addScene(hallway)
                 }
                 addedHallway = true
@@ -37,7 +37,7 @@ class Hallway( // TODO: More Hallway types.
             else
             // Tentative: TODO: More types of rooms and a factory function.
                 Cell(parentSceneMap, this).let { cell ->
-                    addActor(Actor.DoorTo(cell))
+                    addActor(DoorTo(cell))
                     parentSceneMap.addScene(cell)
                 }
         }

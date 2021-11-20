@@ -10,7 +10,7 @@ class Opening(
     leafNode = true,
 ) {
     init {
-        addActor(Actor.PureFlavor(
+        addActor(PureFlavor(
             name = "cell",
             additionalDescriptionLines = listOf(
                 "\tYou don't remember how long you've been here.",
@@ -22,7 +22,7 @@ class Opening(
         ))
 
         Hallway(parentSceneMap, this).let { hallway ->
-            addActor(Actor.DoorTo(hallway))
+            addActor(DoorTo(hallway))
             parentSceneMap.numHallways++
             parentSceneMap.addScene(hallway)
         }
