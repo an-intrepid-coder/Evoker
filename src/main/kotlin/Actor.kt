@@ -1,6 +1,27 @@
 const val floodWaterTimer = 20 // for now. This arbitrary value is subject to balance changes down the road.
 
-enum class ElementType {
+/**
+ * Checks for Actors with the same name in the scene, and appends numbers next to them if there is more than one,
+ * for ease of targeting.
+ */
+fun handleDuplicateActors(actorList: List<Actor>) {
+    actorList.forEach { it.name = it.name.filter { !it.isDigit() } }
+    val chunked = mutableListOf<MutableList<Actor>>()
+    actorList.forEach { actor ->
+        if (chunked.none { it.any { it.name == actor.name } })
+            chunked.add(mutableListOf(actor))
+        else
+            chunked.first { it.any { it.name == actor.name } }
+                .add(actor)
+    }
+    chunked.filter { it.size > 1 }.forEach { actorSublist ->
+        actorSublist.forEachIndexed { index, actor ->
+            actor.name = actor.name + index
+        }
+    }
+}
+
+enum class AttunementType {
     WATER,
     // More to come!
 }
