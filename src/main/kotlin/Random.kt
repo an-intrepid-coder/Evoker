@@ -3,5 +3,5 @@
  */
 
 fun withChance(outOf: Int, chanceOf: Int): Boolean {
-    return chanceOf < (0..outOf).random()
+    return (0..outOf).random() < chanceOf
 }

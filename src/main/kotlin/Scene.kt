@@ -22,27 +22,27 @@ val cellNames = listOf(
 val cellFlavors = listOf(
     Actor.PureFlavor(
         name = "floor",
-        additionalDescriptionLines = listOf("The floor is covered in a fine layer of dust.")
+        additionalDescriptionLines = listOf("\tThe floor is covered in a fine layer of dust.")
     ),
     Actor.PureFlavor(
         name = "floor",
-        additionalDescriptionLines = listOf("The floor is covered in bloody hand- and foot-prints.")
+        additionalDescriptionLines = listOf("\tThe floor is covered in bloody hand- and foot-prints.")
     ),
     Actor.PureFlavor(
         name = "walls",
-        additionalDescriptionLines = listOf("The walls have bolts for restraining people with chains.")
+        additionalDescriptionLines = listOf("\tThe walls have bolts for restraining people with chains.")
     ),
     Actor.PureFlavor(
         name = "walls",
-        additionalDescriptionLines = listOf("The walls are windowless and bleak.")
+        additionalDescriptionLines = listOf("\tThe walls are windowless and bleak.")
     ),
     Actor.PureFlavor(
         name = "walls",
-        additionalDescriptionLines = listOf("The walls are covered in indecipherable scribblings.")
+        additionalDescriptionLines = listOf("\tThe walls are covered in indecipherable scribblings.")
     ),
     Actor.PureFlavor(
         name = "air",
-        additionalDescriptionLines = listOf("The air in this place is dank and evil.")
+        additionalDescriptionLines = listOf("\tThe air in this place is dank and evil.")
     ),
     // More to come
 )
@@ -121,6 +121,7 @@ sealed class WaterLevel(val waterLevelType: WaterLevelType) {
 sealed class Scene(
     val name: String,
     val parentSceneMap: SceneMap,
+    val leafNode: Boolean,
     var waterLevel: WaterLevel = WaterLevel.None(),
     var floodSource: Boolean = false,
     var shielded: Int? = null,
@@ -215,8 +216,9 @@ sealed class Scene(
     class Opening(
         parentSceneMap: SceneMap,
     ) : Scene(
-        "Your Filthy Cell",
-        parentSceneMap
+        name = "Your Filthy Cell",
+        parentSceneMap = parentSceneMap,
+        leafNode = true,
     ) {
         init {
             addActor(Actor.PureFlavor(
@@ -229,11 +231,6 @@ sealed class Scene(
                     "\tThere is nothing stopping you from walking out..."
                 )
             ))
-
-            addActor(Actor.GenericChest(listOf(
-                Actor.Nectar(),
-                Actor.Aquatome()
-            )))
 
             Hallway(parentSceneMap, this).let { hallway ->
                 addActor(Actor.DoorTo(hallway))
@@ -251,8 +248,9 @@ sealed class Scene(
         parentSceneMap: SceneMap,
         cameFrom: Scene,
     ) : Scene(
-        hallwayNames.random(),
-        parentSceneMap
+        name = hallwayNames.random(),
+        parentSceneMap = parentSceneMap,
+        leafNode = false,
     ) {
         init {
             val additionalConnections = (1..3).random() // for now; may adjust this
@@ -283,13 +281,14 @@ sealed class Scene(
     /**
      * Cells serve as end-nodes for the SceneMap, for now.
      */
-    // TODO: More kinds of end-nodes.
+    // TODO: More kinds of leaf-nodes.
     class Cell(
         parentSceneMap: SceneMap,
         cameFrom: Scene
     ) : Scene(
-        cellNames.random(),
-        parentSceneMap
+        name = cellNames.random(),
+        parentSceneMap = parentSceneMap,
+        leafNode = true
     ) {
         init {
             addActor(Actor.DoorTo(cameFrom))

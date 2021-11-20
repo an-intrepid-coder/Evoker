@@ -13,7 +13,31 @@ class SceneMap(val parentGame: EvokerGame) {
             activeScene = scenes[it]
             activeScene!!.addActor(Actor.Player())
         }
-        scenes.values.random().addActor(Actor.WanderingGolem())
+
+        // One Wandering Golem, placed randomly.
+        scenes.values
+            .random()
+            .addActor(Actor.WanderingGolem())
+
+        // One chest containing the Aquatome and a potion, placed randomly.
+        randomLeafNode().addActor(Actor.GenericChest(listOf(
+            randomPotion(),
+            Actor.Aquatome()
+        )))
+
+        // One chest containing the Shieldtome and a potion, placed randomly.
+        randomLeafNode().addActor(Actor.GenericChest(listOf(
+            randomPotion(),
+            Actor.ShieldTome()
+        )))
+
+        scenes.values.forEach { handleDuplicateActors(it.actors) }
+    }
+
+    private fun randomLeafNode(): Scene {
+        return scenes.values
+            .filter { it.leafNode }
+            .random()
     }
 
     /**

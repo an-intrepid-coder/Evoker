@@ -1,4 +1,4 @@
-const val floodWaterTimer = 20 // for now. This arbitrary value is subject to balance changes down the road.
+const val floodWaterTimer = 20 // for now
 
 /**
  * Checks for Actors with the same name in the scene, and appends numbers next to them if there is more than one,
@@ -23,6 +23,7 @@ fun handleDuplicateActors(actorList: List<Actor>) {
 
 enum class AttunementType {
     WATER,
+    SHIELD,
     // More to come!
 }
 
@@ -32,7 +33,7 @@ enum class AttunementType {
  * capabilities.
  */
 sealed class Actor(
-    val name: String,
+    var name: String,
     var maxHealth: Int? = null,
     var additionalDescriptionLines: List<String>? = null,
     val isPlayer: Boolean = false,
@@ -102,6 +103,10 @@ sealed class Actor(
                 null -> null
                 else -> additionalDescriptionLines!!.joinToString("\n")
             },
+            when (attunements.isEmpty()) {
+                true -> null
+                else -> "\tAttuned to: " + attunements.joinToString(", ") { it.toString().lowercase() }
+            }
         )
         return descriptionLines
             .filterNotNull()
@@ -151,6 +156,21 @@ sealed class Actor(
         inventory = mutableListOf()
     }
 
+    /**
+     * Attempts to add a spell type to an Actor's spellbook.
+     */
+    fun addSpell(spellName: String): String? {
+        if (this.spellBook.contains(spellName)) {
+            if (this.isPlayer)
+                return "You already know the secrets of this book."
+        } else {
+            this.spellBook.add(spellName)
+            if (this.isPlayer)
+                return "You learn the secrets of $spellName magic!"
+        }
+        return null
+    }
+
     class Player : Actor(
         name = "Player",
         isPlayer = true,
@@ -179,18 +199,16 @@ sealed class Actor(
 
                 TODO: Some sort of puzzle-oriented way of fighting the creature for the player, and a reason for
                     doing so.
-
-                TODO: Cause rooms to spring a leak when the golem walks by, sometimes.
              */
             val messages = mutableListOf<String>()
             when (self.retaliating) {
                 true -> {
                     scene.getPlayer()?.let { player ->
+                        messages.add("${self.name} strikes you in retaliation!")
                         Action.Strike(Command(
                             raw = "strike player",
                             targetEnvironment = scene.actors
-                        )).effect!!.invoke(scene, self, player)
-                        messages.add("${self.name} strikes you in retaliation!")
+                        )).effect!!.invoke(scene, self, player).forEach { messages.add(it) }
                         self.retaliating = false
                     }
                 }
@@ -314,7 +332,7 @@ sealed class Actor(
         }
     ) {
         init {
-            elementalAttunements.add(ElementType.WATER)
+            attunements.add(AttunementType.WATER)
         }
     }
 
@@ -330,7 +348,7 @@ sealed class Actor(
     )
 
     class DoorTo(targetScene: Scene) : Actor(
-        name = "Door${targetScene.id}",
+        name = "Door",
         areaTransitionId = targetScene.id,
         interactiveEffect = { scene, _, triggerer ->
             val messages = mutableListOf<String>()
@@ -418,27 +436,17 @@ sealed class Actor(
             "\tIt can also be used to raise or lower the water level in an area.",
             // more to come
         ),
-        interactiveEffect = { scene, self, triggerer ->
+        interactiveEffect = { _, _, triggerer ->
             triggerer ?: error("Triggering actor not found.")
-
             val messages = mutableListOf<String>()
-
-            if (triggerer.spellBook.contains("water")) {
-                if (triggerer.isPlayer)
-                    messages.add("You already know the secrets of this book.")
-            } else {
-                triggerer.spellBook.add("water")
-                if (triggerer.isPlayer)
-                    messages.add("You learn the secrets of water magic!")
-            }
-
+            triggerer.addSpell("water")?.let { messages.add(it) }
             messages
         },
     ) {
-        init { elementalAttunements.add(ElementType.WATER) }
+        init { attunements.add(AttunementType.WATER) }
         /*
             Note: I'm thinking of allowing the spellbooks to be harmed or improved or otherwise altered when spells are
-            used on them, in which case their elemental attunement may matter.
+            used on them, in which case their elemental may matter.
          */
     }
 
