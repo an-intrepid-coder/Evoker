@@ -9,7 +9,7 @@ class SceneMap(val parentGame: EvokerGame) {
     // TODO: A variety of switches and triggers to guide map generation.
 
     init {
-        addScene(Scene.Opening(this)).let {
+        addScene(Opening(this)).let {
             activeScene = scenes[it]
             activeScene!!.addActor(Actor.Player())
         }

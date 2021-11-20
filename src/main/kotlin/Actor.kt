@@ -205,7 +205,7 @@ sealed class Actor(
                 true -> {
                     scene.getPlayer()?.let { player ->
                         messages.add("${self.name} strikes you in retaliation!")
-                        Action.Strike(Command(
+                        Strike(Command(
                             raw = "strike player",
                             targetEnvironment = scene.actors
                         )).effect!!.invoke(scene, self, player).forEach { messages.add(it) }
@@ -242,7 +242,7 @@ sealed class Actor(
                     ))
 
                     // Move the Golem
-                    Action.Use(Command(
+                    Use(Command(
                         raw = "use ${areaTransition.name}",
                         targetEnvironment = scene.actors,
                     )).effect!!.invoke(scene, self, areaTransition)
