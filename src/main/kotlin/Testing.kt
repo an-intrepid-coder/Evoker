@@ -1,3 +1,4 @@
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.time.DurationUnit
@@ -23,8 +24,11 @@ suspend fun parallelStressTest(
     var averageTime = 0.0
     var floodWaterAverage = 0
     coroutineScope {
+
+        val jobs = mutableListOf<Job>()
+
         repeat (numTests) {
-            launch {
+            jobs.add(launch {
                 val game = EvokerGame()
                 val time = measureTime { game.passiveCrashTest(numTurnsPerTest) }
                 averageTime += time.toDouble(DurationUnit.SECONDS)
@@ -35,8 +39,10 @@ suspend fun parallelStressTest(
                     .toList()
                     .size
                 sampleSize++
-            }
+            })
         }
+
+        jobs.forEach { it.join() }
     }
     averageTime /= sampleSize
     floodWaterAverage /= sampleSize
